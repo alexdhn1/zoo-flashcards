@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zoo Board Flashcards 🦎</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦎</text></svg>" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #fafaf9 0%, #f0ebe3 50%, #e7e0d5 100%);
+      font-family: 'EB Garamond', Georgia, serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    #root { min-height: 100vh; }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.5s ease-out both; }
+    .card-in { animation: cardIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+    /* Textarea */
+    .paste-area {
+      width: 100%;
+      min-height: 280px;
+      border-radius: 16px;
+      border: 2px solid #d6cfc7;
+      background: #fffffe;
+      padding: 20px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #44403c;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .paste-area:focus { border-color: #a8a29e; }
+    .paste-area::placeholder { color: #c4beb6; }
+
+    /* Boutons */
+    .btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: 1px solid #d6cfc7;
+      background: transparent;
+      color: #78716c;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #f5f0eb; }
+    .btn-primary {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      padding: 10px 32px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #292524 0%, #44403c 100%);
+      color: #fafaf9;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(41,37,36,0.2);
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(41,37,36,0.25); }
+    .btn-primary:disabled { background: #d6d3d1; color: #a8a29e; cursor: not-allowed; box-shadow: none; transform: none; }
+
+    .btn-nav {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 10px 24px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-nav:hover:not(:disabled) { background: #f8fafc; transform: translateY(-1px); }
+    .btn-nav:disabled { background: #f8fafc; color: #cbd5e1; cursor: not-allowed; }
+
+    /* Flip card */
+    .flip-container { perspective: 1200px; width: 100%; max-width: 620px; margin: 0 auto; }
+    .flip-card {
+      position: relative;
+      width: 100%;
+      min-height: 340px;
+      cursor: pointer;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .flip-card.flipped { transform: rotateY(180deg); }
+    .flip-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 20px;
+      padding: 32px 28px 24px;
+      display: flex;
+      flex-direction: column;
+    }
+    .flip-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Dots */
+    .dot {
+      height: 10px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0;
+    }
+
+    /* Keyboard hints */
+    .kbd {
+      background: #f5f0eb;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin: 0 4px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .flip-face { padding: 24px 20px 20px; }
+      .flip-card { min-height: 300px; }
+      .question-text { font-size: 17px !important; }
+      .answer-text { font-size: 16px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.5/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useCallback, useEffect } = React;
+
+    const SAMPLE_DATA = `---
+FLASHCARD 1
+Q: A juvenile bearded dragon presents with bilateral swelling of the hindlimbs and a soft mandible. What is your primary differential and what diagnostic approach do you recommend?
+A: Metabolic bone disease (nutritional secondary hyperparathyroidism) is the primary differential. Recommended diagnostics include whole-body radiographs to assess bone density and pathological fractures, plus ionized calcium and phosphorus blood levels.
+Category: 1 — Diagnosis
+Species: Bearded dragon (Pogona vitticeps)
+---
+FLASHCARD 2
+Q: You need to collect a blood sample from an adult green iguana. What is the preferred venipuncture site and what positioning do you use?
+A: The ventral coccygeal (tail) vein is preferred. Position the iguana in dorsal recumbency with the tail extended. Insert the needle on the ventral midline, caudal to the cloaca, at a 45-degree angle directed cranially.
+Category: 7 — Diagnostic Procedures
+Species: Green iguana (Iguana iguana)
+---
+FLASHCARD 3
+Q: An African grey parrot on a seed-only diet presents with acute seizures. What is your immediate therapeutic intervention and what underlying condition do you suspect?
+A: Suspect hypocalcemia secondary to nutritional deficiency. Immediate treatment is slow IV calcium gluconate (50-100 mg/kg diluted) with cardiac monitoring, as rapid administration can cause bradycardia.
+Category: 2 — Therapeutics
+Species: African grey parrot (Psittacus erithacus)
+---
+FLASHCARD 4
+Q: You are planning a coelioscopy on a red-eared slider turtle. How do you access the coelomic cavity and what anatomical landmark guides your approach?
+A: Access is achieved through the prefemoral fossa — the soft tissue window between the forelimb and hindlimb, cranial to the pelvis. The turtle is positioned in dorsal recumbency. The trocar is directed dorsomedially to avoid the bladder.
+Category: 7 — Diagnostic Procedures
+Species: Red-eared slider (Trachemys scripta elegans)
+---
+FLASHCARD 5
+Q: A zoo reports increased mortality in a group of flamingos during winter. Necropsy shows hepatic necrosis. What environmental factor should you investigate first and what preventive measure is indicated?
+A: Investigate potential ingestion of toxic cyanobacteria (blue-green algae) from stagnant water sources. Preventive measures include water quality monitoring, regular cleaning of ponds, and ensuring fresh water circulation.
+Category: 4 — Prevention & Population Medicine
+Species: Flamingo (Phoenicopterus spp.)
+`;
+
+    // Parser de flashcards
+    function parseFlashcards(text) {
+      const cards = [];
+      const blocks = text.split(/^---$/m).filter(b => b.trim());
+
+      for (const block of blocks) {
+        const lines = block.trim().split('\n');
+        let question = '', answer = '', category = '', species = '';
+        let currentField = null;
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.match(/^FLASHCARD\s*\d*/i)) continue;
+
+          if (trimmed.match(/^Q\s*[:：]/i)) {
+            currentField = 'q';
+            question = trimmed.replace(/^Q\s*[:：]\s*/i, '');
+          } else if (trimmed.match(/^A\s*[:：]/i)) {
+            currentField = 'a';
+            answer = trimmed.replace(/^A\s*[:：]\s*/i, '');
+          } else if (trimmed.match(/^Cat[ée]gor[yi]e?\s*[:：]/i)) {
+            currentField = 'cat';
+            category = trimmed.replace(/^Cat[ée]gor[yi]e?\s*[:：]\s*/i, '');
+          } else if (trimmed.match(/^(Species|Esp[èe]ce)\s*[:：]/i)) {
+            currentField = 'sp';
+            species = trimmed.replace(/^(Species|Esp[èe]ce)\s*[:：]\s*/i, '');
+          } else if (trimmed && currentField) {
+            if (currentField === 'q') question += ' ' + trimmed;
+            else if (currentField === 'a') answer += ' ' + trimmed;
+          }
+        }
+
+        if (question && answer) {
+          cards.push({ question: question.trim(), answer: answer.trim(), category, species });
+        }
+      }
+      return cards;
+    }
+
+    // Couleurs et icônes par catégorie
+    const categoryIcons = { '1': '🔍', '2': '💊', '3': '📈', '4': '🛡️', '5': '😴', '6': '🧬', '7': '🩺', '8': '✂️' };
+    const categoryColors = {
+      '1': { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
+      '2': { bg: '#dbeafe', border: '#3b82f6', text: '#1e3a5f' },
+      '3': { bg: '#d1fae5', border: '#10b981', text: '#064e3b' },
+      '4': { bg: '#ede9fe', border: '#8b5cf6', text: '#4c1d95' },
+      '5': { bg: '#fce7f3', border: '#ec4899', text: '#831843' },
+      '6': { bg: '#ffedd5', border: '#f97316', text: '#7c2d12' },
+      '7': { bg: '#e0f2fe', border: '#0ea5e9', text: '#0c4a6e' },
+      '8': { bg: '#fde2e2', border: '#ef4444', text: '#7f1d1d' },
+    };
+
+    function getCatIcon(cat) {
+      for (const [k, v] of Object.entries(categoryIcons)) { if (cat.includes(k)) return v; }
+      return '📋';
+    }
+    function getCatColor(cat) {
+      for (const [k, v] of Object.entries(categoryColors)) { if (cat.includes(k)) return v; }
+      return { bg: '#f3f4f6', border: '#9ca3af', text: '#374151' };
+    }
+
+    // Composant carte
+    function FlashCard({ card, index, total, onNext, onPrev, onFlip, flipped }) {
+      const c = getCatColor(card.category);
+      const icon = getCatIcon(card.category);
+
+      return (
+        <div className="flip-container card-in" key={index}>
+          <div className={`flip-card ${flipped ? 'flipped' : ''}`} onClick={onFlip}>
+            {/* Question */}
+            <div className="flip-face" style={{
+              border: `2px solid ${c.border}`,
+              background: `linear-gradient(135deg, #ffffff 0%, ${c.bg} 100%)`,
+              boxShadow: `0 8px 32px ${c.border}33, 0 2px 8px rgba(0,0,0,0.06)`,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: c.text, opacity: 0.7 }}>
+                  {icon} {card.category}
+                </span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#94a3b8', background: '#f1f5f9', padding: '3px 10px', borderRadius: 20 }}>
+                  {index + 1} / {total}
+                </span>
+              </div>
+              {card.species && (
+                <div style={{ fontFamily: "'EB Garamond', Georgia, serif", fontSize: 13, fontStyle: 'italic', color: c.text, opacity: 0.6, marginBottom: 16 }}>
+                  {card.species}
+                </div>
+              )}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p className="question-text" style={{ fontFamily: "'EB Garamond', Georgia, serif", fontSize: 19, lineHeight: 1.55, color: '#1e293b', textAlign: 'center' }}>
+                  {card.question}
+                </p>
+              </div>
+              <div style={{ textAlign: 'center', fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#94a3b8', marginTop: 12 }}>
+                tap to reveal answer
+              </div>
+            </div>
+
+            {/* Réponse */}
+            <div className="flip-face flip-back" style={{
+              border: `2px solid ${c.border}`,
+              background: `linear-gradient(135deg, ${c.bg} 0%, #ffffff 100%)`,
+              boxShadow: `0 8px 32px ${c.border}33, 0 2px 8px rgba(0,0,0,0.06)`,
+            }}>
+              <div style={{ marginBottom: 20 }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: c.text, background: `${c.border}22`, padding: '4px 12px', borderRadius: 20 }}>
+                  Answer
+                </span>
+              </div>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p className="answer-text" style={{ fontFamily: "'EB Garamond', Georgia, serif", fontSize: 18, lineHeight: 1.6, color: c.text, textAlign: 'center' }}>
+                  {card.answer}
+                </p>
+              </div>
+              <div style={{ textAlign: 'center', fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#94a3b8', marginTop: 12 }}>
+                tap to see question
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24 }}>
+            <button className="btn-nav" onClick={e => { e.stopPropagation(); onPrev(); }} disabled={index === 0}>← prev</button>
+            <button className="btn-nav" onClick={e => { e.stopPropagation(); onNext(); }} disabled={index === total - 1}>next →</button>
+          </div>
+        </div>
+      );
+    }
+
+    // Dots de progression
+    function ProgressDots({ cards, currentIndex, onJump }) {
+      return (
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 500, margin: '0 auto' }}>
+          {cards.map((card, i) => {
+            const c = getCatColor(card.category);
+            return (
+              <button key={i} className="dot" onClick={() => onJump(i)}
+                title={`Card ${i + 1}: ${card.category}`}
+                style={{
+                  width: i === currentIndex ? 28 : 10,
+                  background: i === currentIndex ? c.border : `${c.border}44`,
+                }}
+              />
+            );
+          })}
+        </div>
+      );
+    }
+
+    // App principale
+    function App() {
+      const [view, setView] = useState('input');
+      const [rawText, setRawText] = useState('');
+      const [cards, setCards] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [flipped, setFlipped] = useState(false);
+      const [shuffled, setShuffled] = useState(false);
+
+      const handleParse = useCallback(() => {
+        const parsed = parseFlashcards(rawText);
+        if (parsed.length > 0) {
+          setCards(parsed);
+          setCurrentIndex(0);
+          setFlipped(false);
+          setView('cards');
+        }
+      }, [rawText]);
+
+      const handleShuffle = useCallback(() => {
+        setCards(c => [...c].sort(() => Math.random() - 0.5));
+        setCurrentIndex(0);
+        setFlipped(false);
+        setShuffled(true);
+        setTimeout(() => setShuffled(false), 600);
+      }, []);
+
+      // Raccourcis clavier
+      useEffect(() => {
+        if (view !== 'cards') return;
+        const handler = e => {
+          if (e.key === 'ArrowRight' || e.key === 'd') { setCurrentIndex(i => Math.min(i + 1, cards.length - 1)); setFlipped(false); }
+          else if (e.key === 'ArrowLeft' || e.key === 'a') { setCurrentIndex(i => Math.max(i - 1, 0)); setFlipped(false); }
+          else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setFlipped(f => !f); }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+      }, [view, cards.length]);
+
+      // Écran d'import
+      if (view === 'input') {
+        return (
+          <div style={{ padding: '40px 20px', maxWidth: 640, margin: '0 auto' }}>
+            <div className="fade-up" style={{ textAlign: 'center', marginBottom: 48 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🦎</div>
+              <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 28, color: '#292524', marginBottom: 8, letterSpacing: -0.5 }}>
+                Zoo Board Flashcards
+              </h1>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: '#78716c', letterSpacing: 0.5 }}>
+                Paste your Claude output below to generate interactive cards
+              </p>
+            </div>
+
+            <div className="fade-up" style={{ animationDelay: '0.1s' }}>
+              <textarea
+                className="paste-area"
+                value={rawText}
+                onChange={e => setRawText(e.target.value)}
+                placeholder={`Paste the PART 2 — Flashcards output from Claude here...\n\n---\nFLASHCARD 1\nQ: Your question...\nA: Your answer...\nCategory: 1 — Diagnosis\nSpecies: ...\n---`}
+              />
+            </div>
+
+            <div className="fade-up" style={{ display: 'flex', gap: 12, marginTop: 20, justifyContent: 'center', flexWrap: 'wrap', animationDelay: '0.2s' }}>
+              <button className="btn" onClick={() => setRawText(SAMPLE_DATA)}>load sample data</button>
+              <button className="btn-primary" onClick={handleParse} disabled={!rawText.trim()}>
+                Generate cards →
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // Écran flashcards
+      const card = cards[currentIndex];
+
+      return (
+        <div style={{ padding: '32px 20px', maxWidth: 680, margin: '0 auto' }}>
+          {/* Top bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <button className="btn" onClick={() => setView('input')}>← new deck</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🦎</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#78716c' }}>{cards.length} cards</span>
+            </div>
+            <button className="btn" onClick={handleShuffle} style={{
+              transform: shuffled ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.4s',
+            }}>🔀 shuffle</button>
+          </div>
+
+          {/* Dots */}
+          <div style={{ marginBottom: 28 }}>
+            <ProgressDots cards={cards} currentIndex={currentIndex} onJump={i => { setCurrentIndex(i); setFlipped(false); }} />
+          </div>
+
+          {/* Carte */}
+          {card && (
+            <FlashCard
+              card={card} index={currentIndex} total={cards.length} flipped={flipped}
+              onFlip={() => setFlipped(f => !f)}
+              onNext={() => { setCurrentIndex(i => Math.min(i + 1, cards.length - 1)); setFlipped(false); }}
+              onPrev={() => { setCurrentIndex(i => Math.max(i - 1, 0)); setFlipped(false); }}
+            />
+          )}
+
+          {/* Raccourcis */}
+          <div style={{ textAlign: 'center', marginTop: 36, fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#a8a29e' }}>
+            <span className="kbd">← →</span> navigate
+            <span style={{ margin: '0 12px' }}>·</span>
+            <span className="kbd">space</span> flip
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
