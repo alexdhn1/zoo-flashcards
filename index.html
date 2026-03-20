@@ -186,36 +186,49 @@ Category: 4 — Prevention & Population Medicine
 Species: Flamingo (Phoenicopterus spp.)
 `;
 
-    // Parser de flashcards
+    // Parser de flashcards — accepte avec ou sans séparateurs ---
     function parseFlashcards(text) {
       const cards = [];
-      const blocks = text.split(/^---$/m).filter(b => b.trim());
+
+      // Étape 1 : découper par "FLASHCARD N" (ignorer les --- optionnels)
+      // On split sur le pattern "FLASHCARD" suivi d'un numéro
+      const blocks = text.split(/(?=FLASHCARD\s*\d+)/i).filter(b => b.trim());
 
       for (const block of blocks) {
-        const lines = block.trim().split('\n');
+        // Nettoyer les --- et le header FLASHCARD N
+        const cleaned = block.replace(/^---+\s*/gm, '').replace(/^FLASHCARD\s*\d+\s*/i, '').trim();
+        if (!cleaned) continue;
+
         let question = '', answer = '', category = '', species = '';
-        let currentField = null;
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed.match(/^FLASHCARD\s*\d*/i)) continue;
+        // Étape 2 : extraire les champs avec regex robustes
+        // Chercher Q : ... (tout jusqu'au prochain champ R/A :)
+        const qMatch = cleaned.match(/^Q\s*[:：]\s*([\s\S]*?)(?=\n\s*[RA]\s*[:：])/im);
+        if (qMatch) question = qMatch[1].replace(/\s+/g, ' ').trim();
 
-          if (trimmed.match(/^Q\s*[:：]/i)) {
-            currentField = 'q';
-            question = trimmed.replace(/^Q\s*[:：]\s*/i, '');
-          } else if (trimmed.match(/^A\s*[:：]/i)) {
-            currentField = 'a';
-            answer = trimmed.replace(/^A\s*[:：]\s*/i, '');
-          } else if (trimmed.match(/^Cat[ée]gor[yi]e?\s*[:：]/i)) {
-            currentField = 'cat';
-            category = trimmed.replace(/^Cat[ée]gor[yi]e?\s*[:：]\s*/i, '');
-          } else if (trimmed.match(/^(Species|Esp[èe]ce)\s*[:：]/i)) {
-            currentField = 'sp';
-            species = trimmed.replace(/^(Species|Esp[èe]ce)\s*[:：]\s*/i, '');
-          } else if (trimmed && currentField) {
-            if (currentField === 'q') question += ' ' + trimmed;
-            else if (currentField === 'a') answer += ' ' + trimmed;
-          }
+        // Chercher R : ou A : ... (tout jusqu'au prochain champ Catégor/Category/Species/Espèce ou fin)
+        const aMatch = cleaned.match(/^[RA]\s*[:：]\s*([\s\S]*?)(?=\n?\s*Cat[ée]gor|$)/im);
+        if (aMatch) answer = aMatch[1].replace(/\s+/g, ' ').trim();
+
+        // Chercher Catégorie/Category
+        const catMatch = cleaned.match(/Cat[ée]gor[yi]e?\s*[:：]\s*(.+)/i);
+        if (catMatch) category = catMatch[1].trim();
+
+        // Chercher Espèce/Species
+        const spMatch = cleaned.match(/(Species|Esp[èe]ce)\s*[:：]\s*(.+)/i);
+        if (spMatch) species = spMatch[2].trim();
+
+        // Nettoyer : retirer Espèce/Species de la catégorie si collés sur la même ligne
+        if (category) {
+          category = category.replace(/(Species|Esp[èe]ce)\s*[:：]\s*.*/i, '').trim();
+        }
+        // Nettoyer : retirer Catégorie de la réponse si collés
+        if (answer) {
+          answer = answer.replace(/Cat[ée]gor[yi]e?\s*[:：]\s*.*/i, '').trim();
+        }
+        // Nettoyer : retirer Species de la réponse
+        if (answer) {
+          answer = answer.replace(/(Species|Esp[èe]ce)\s*[:：]\s*.*/i, '').trim();
         }
 
         if (question && answer) {
@@ -343,14 +356,18 @@ Species: Flamingo (Phoenicopterus spp.)
       const [currentIndex, setCurrentIndex] = useState(0);
       const [flipped, setFlipped] = useState(false);
       const [shuffled, setShuffled] = useState(false);
+      const [parseError, setParseError] = useState('');
 
       const handleParse = useCallback(() => {
+        setParseError('');
         const parsed = parseFlashcards(rawText);
         if (parsed.length > 0) {
           setCards(parsed);
           setCurrentIndex(0);
           setFlipped(false);
           setView('cards');
+        } else {
+          setParseError('No flashcards detected. Make sure each card starts with "FLASHCARD 1", "FLASHCARD 2", etc. and contains Q: and A: (or R:) fields.');
         }
       }, [rawText]);
 
@@ -403,6 +420,16 @@ Species: Flamingo (Phoenicopterus spp.)
                 Generate cards →
               </button>
             </div>
+
+            {parseError && (
+              <div style={{
+                marginTop: 16, padding: '12px 16px', borderRadius: 10,
+                background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b',
+                fontFamily: "'DM Mono', monospace", fontSize: 12, textAlign: 'center',
+              }}>
+                ⚠️ {parseError}
+              </div>
+            )}
           </div>
         );
       }
