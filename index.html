@@ -6,25 +6,9 @@
   <title>Zoo Board Flashcards 🦎</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦎</text></svg>" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div id="root"></div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-  <!-- React -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.5/babel.min.js"></script>
-
-  <!-- App modules (ordre important) -->
-  <script src="js/config.js"></script>          <!-- Config Firebase + whitelist -->
-  <script src="js/firebase-db.js"></script>      <!-- Init Firebase + CRUD Firestore -->
-  <script src="js/parser.js"></script>           <!-- Parser de flashcards -->
-  <script type="text/babel" src="js/app.jsx"></script> <!-- Composants React + logique -->
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
