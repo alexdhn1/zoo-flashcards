@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useRef, useCallback } from 'react'
 import { catIcons, catColors, catNames, getCatNum, getCatIcon, getCatColor } from './categories'
+import { parseCSV } from './csvParser'
 
 /* ── Google SVG icon ── */
 export function GoogleIcon() {
@@ -146,6 +147,155 @@ export function ProgressDots({ cards, currentIndex, onJump }) {
           />
         )
       })}
+    </div>
+  )
+}
+
+/* ── CSV preview list ── */
+export function CsvPreviewList({ cards, skipped }) {
+  return (
+    <div>
+      {skipped > 0 && (
+        <div className="csv-skip-warning">
+          ⚠️ {skipped} row{skipped > 1 ? 's' : ''} skipped — missing question or answer
+        </div>
+      )}
+      <ol className="csv-preview-list">
+        {cards.map((card, i) => (
+          <li key={card.id} style={{ marginBottom: 10 }}>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#78716c', marginBottom: 2 }}>
+              Q{i + 1}
+            </div>
+            <div style={{ fontFamily: "'EB Garamond', serif", fontSize: 14, color: '#292524', marginBottom: 2 }}>
+              {card.question}
+            </div>
+            <div style={{ fontFamily: "'EB Garamond', serif", fontSize: 13, color: '#78716c', fontStyle: 'italic' }}>
+              → {card.answer}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+/* ── CSV drag-and-drop import zone ── */
+export function CsvImportZone({ onImport, disabled }) {
+  const [dragOver, setDragOver] = useState(false)
+  const [preview, setPreview] = useState(null)
+  const [skipped, setSkipped] = useState(0)
+  const [error, setError] = useState(null)
+  const fileInputRef = useRef(null)
+
+  const reset = useCallback(() => {
+    setPreview(null)
+    setSkipped(0)
+    setError(null)
+    setDragOver(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }, [])
+
+  const processFile = useCallback((file) => {
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+      setError('Please drop a CSV file (.csv)')
+      setPreview(null)
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const result = parseCSV(ev.target.result)
+      if (result.error === 'EMPTY_FILE') {
+        setError('The file contains no flashcards')
+        setPreview(null)
+      } else if (result.error === 'FORMAT_ERROR') {
+        setError('Format not recognized — expected two columns: question and answer')
+        setPreview(null)
+      } else {
+        setError(null)
+        setPreview(result.cards)
+        setSkipped(result.skipped)
+      }
+    }
+    reader.readAsText(file, 'utf-8')
+  }, [])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    processFile(file)
+  }, [processFile])
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    setDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback(() => setDragOver(false), [])
+
+  const handleFileChange = useCallback((e) => {
+    processFile(e.target.files[0])
+    e.target.value = ''
+  }, [processFile])
+
+  const handleConfirm = useCallback(() => {
+    if (preview) onImport(preview)
+  }, [preview, onImport])
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      {!preview ? (
+        <div
+          className={`csv-drop-zone${dragOver ? ' dragover' : ''}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onClick={() => fileInputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => e.key === 'Enter' && fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <div style={{ fontSize: 24, marginBottom: 8 }}>📄</div>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: '#78716c', margin: 0 }}>
+            Drop a NotebookLM CSV
+          </p>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#a8a29e', marginTop: 4 }}>
+            or click to browse
+          </p>
+        </div>
+      ) : (
+        <div style={{ border: '1px solid #e7e0d5', borderRadius: 12, padding: '16px 20px', background: '#fafaf9' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: '#292524', fontWeight: 600 }}>
+              {preview.length} card{preview.length !== 1 ? 's' : ''} ready to import
+            </span>
+            <button className="btn" style={{ fontSize: 11 }} onClick={reset}>✕ cancel</button>
+          </div>
+          <CsvPreviewList cards={preview} skipped={skipped} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+            <button
+              className="btn-primary"
+              onClick={handleConfirm}
+              disabled={disabled}
+            >
+              {disabled ? 'Saving...' : `Add ${preview.length} cards to deck →`}
+            </button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
+          ⚠️ {error}
+        </div>
+      )}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { auth, googleProvider, ALLOWED_EMAILS } from './firebase-config'
 import { loadCardsFromFirestore, addCardsToFirestore, deleteCardFromFirestore, clearAllCardsFirestore } from './firestore'
 import { parseFlashcards } from './parser'
 import { getCatNum } from './categories'
-import { Toast, ConfirmModal, CategoryFilters, FlashCard, ProgressDots, LoginScreen } from './components'
+import { Toast, ConfirmModal, CategoryFilters, FlashCard, ProgressDots, LoginScreen, CsvImportZone } from './components'
 
 /* ── Export JSON (téléchargement fichier) ── */
 function exportJSON(cards) {
@@ -199,6 +199,20 @@ export default function App() {
     reader.readAsText(file); e.target.value = ''
   }, [user])
 
+  const handleCsvImport = useCallback(async (cards) => {
+    setSyncStatus('saving')
+    try {
+      await addCardsToFirestore(user.uid, cards)
+      setAllCards(prev => [...prev, ...cards])
+      setView('cards'); setSyncStatus('ok')
+      showToast(`📥 ${cards.length} cards imported & synced`)
+    } catch (err) {
+      console.error('CSV import error:', err)
+      setSyncStatus('error')
+      showToast('❌ Failed to save to cloud')
+    }
+  }, [user])
+
   /* ══════════════════════════════════════
      RACCOURCIS CLAVIER
      ══════════════════════════════════════ */
@@ -275,6 +289,12 @@ export default function App() {
           </button>
         </div>
         {parseError && <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontFamily: "'DM Mono', monospace", fontSize: 12, textAlign: 'center' }}>⚠️ {parseError}</div>}
+        <div className="fade-up" style={{ marginTop: 24, animationDelay: '0.25s' }}>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#a8a29e', textAlign: 'center', marginBottom: 8, letterSpacing: 0.5 }}>
+            — or import from NotebookLM —
+          </div>
+          <CsvImportZone onImport={handleCsvImport} disabled={syncStatus === 'saving'} />
+        </div>
         <div className="fade-up" style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'center', flexWrap: 'wrap', animationDelay: '0.3s' }}>
           <button className="btn" onClick={() => fileRef.current?.click()}>📥 import JSON</button>
           <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />

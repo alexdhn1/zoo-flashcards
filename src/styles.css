@@ -129,6 +129,30 @@ body {
   box-shadow: 0 16px 48px rgba(0,0,0,0.15);
 }
 
+/* ═══ CSV Import Zone ═══ */
+.csv-drop-zone {
+  width: 100%; min-height: 90px; border-radius: 12px;
+  border: 2px dashed #d6cfc7; background: #fafaf9;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 20px; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  user-select: none;
+}
+.csv-drop-zone:hover { border-color: #a8a29e; background: #f5f0eb; }
+.csv-drop-zone.dragover { border-color: #292524; background: #f0ebe3; }
+
+.csv-preview-list {
+  list-style: none; padding: 0; margin: 0;
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid #e7e0d5; border-radius: 8px; padding: 12px 16px;
+  background: #fffffe;
+}
+
+.csv-skip-warning {
+  margin-bottom: 10px; padding: 8px 12px; border-radius: 8px;
+  background: #fffbeb; border: 1px solid #fcd34d;
+  color: '#92400e'; font-family: 'DM Mono', monospace; font-size: 11px;
+}
+
 /* ═══ Responsive ═══ */
 @media (max-width: 640px) {
   .flip-face { padding: 24px 20px 20px; }
