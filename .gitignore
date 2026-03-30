@@ -17,7 +17,8 @@ npm-debug.log*
 .vscode/
 .idea/
 .claude/
-.github/
+.github/agents/
+.github/prompts/
 
 # Vite
 dist-ssr/
