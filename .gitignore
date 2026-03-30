@@ -16,6 +16,8 @@ npm-debug.log*
 # Editor
 .vscode/
 .idea/
+.claude/
+.github/
 
 # Vite
 dist-ssr/

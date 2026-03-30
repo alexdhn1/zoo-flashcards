@@ -10,6 +10,8 @@
  * - Q/A ou Q/R (anglais ou français)
  * - Catégorie/Category + Espèce/Species sur même ligne ou séparées
  */
+import { TAXONOMY_FALLBACK_GROUP, TAXONOMY_FALLBACK_ORDER } from './taxonomy'
+
 export function parseFlashcards(text) {
   const cards = []
 
@@ -62,6 +64,9 @@ export function parseFlashcards(text) {
         answer: answer.trim(),
         category,
         species,
+        speciesLabel: species,
+        taxonomyGroup: TAXONOMY_FALLBACK_GROUP,
+        taxonomyOrder: TAXONOMY_FALLBACK_ORDER,
         addedAt: new Date().toISOString(),
       })
     }

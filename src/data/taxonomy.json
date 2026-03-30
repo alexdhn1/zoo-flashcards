@@ -1,0 +1,286 @@
+{
+  "groups": [
+    {
+      "id": "amphibiens",
+      "label": "Amphibiens",
+      "orders": [
+        {
+          "id": "amphibia",
+          "label": "Amphibia"
+        }
+      ]
+    },
+    {
+      "id": "reptiles",
+      "label": "Reptiles",
+      "orders": [
+        {
+          "id": "chelonia",
+          "label": "Chelonia"
+        },
+        {
+          "id": "crocodilia",
+          "label": "Crocodilia"
+        },
+        {
+          "id": "lacertilia",
+          "label": "Lacertilia"
+        },
+        {
+          "id": "ophidia",
+          "label": "Ophidia"
+        }
+      ]
+    },
+    {
+      "id": "oiseaux",
+      "label": "Oiseaux",
+      "orders": [
+        {
+          "id": "struthioniformes",
+          "label": "Struthioniformes"
+        },
+        {
+          "id": "sphenisciformes",
+          "label": "Sphenisciformes"
+        },
+        {
+          "id": "gaviiformes",
+          "label": "Gaviiformes"
+        },
+        {
+          "id": "pelecaniformes",
+          "label": "Pelecaniformes"
+        },
+        {
+          "id": "ciconiiformes",
+          "label": "Ciconiiformes"
+        },
+        {
+          "id": "phoenicopteriformes",
+          "label": "Phoenicopteriformes"
+        },
+        {
+          "id": "charadriiformes",
+          "label": "Charadriiformes"
+        },
+        {
+          "id": "anseriformes",
+          "label": "Anseriformes"
+        },
+        {
+          "id": "falconiformes",
+          "label": "Falconiformes"
+        },
+        {
+          "id": "galliformes",
+          "label": "Galliformes"
+        },
+        {
+          "id": "gruiformes",
+          "label": "Gruiformes"
+        },
+        {
+          "id": "columbiformes",
+          "label": "Columbiformes"
+        },
+        {
+          "id": "psittaciformes",
+          "label": "Psittaciformes"
+        },
+        {
+          "id": "cuculiformes",
+          "label": "Cuculiformes"
+        },
+        {
+          "id": "strigiformes",
+          "label": "Strigiformes"
+        },
+        {
+          "id": "caprimulgiformes",
+          "label": "Caprimulgiformes"
+        },
+        {
+          "id": "musophagiformes",
+          "label": "Musophagiformes"
+        },
+        {
+          "id": "trochiliformes",
+          "label": "Trochiliformes"
+        },
+        {
+          "id": "apodiformes",
+          "label": "Apodiformes"
+        },
+        {
+          "id": "trogoniformes",
+          "label": "Trogoniformes"
+        },
+        {
+          "id": "coraciiformes",
+          "label": "Coraciiformes"
+        },
+        {
+          "id": "piciformes",
+          "label": "Piciformes"
+        },
+        {
+          "id": "passeriformes",
+          "label": "Passeriformes"
+        }
+      ]
+    },
+    {
+      "id": "mammiferes",
+      "label": "Mammifères",
+      "orders": [
+        {
+          "id": "monotrema",
+          "label": "Monotrema"
+        },
+        {
+          "id": "marsupialia",
+          "label": "Marsupialia"
+        },
+        {
+          "id": "insectivora",
+          "label": "Insectivora"
+        },
+        {
+          "id": "chiroptera",
+          "label": "Chiroptera"
+        },
+        {
+          "id": "prosimians",
+          "label": "Prosimians"
+        },
+        {
+          "id": "new_world_old_world_monkeys",
+          "label": "New World and Old World Monkeys"
+        },
+        {
+          "id": "great_apes",
+          "label": "Great Apes"
+        },
+        {
+          "id": "xenarthra",
+          "label": "Xenarthra"
+        },
+        {
+          "id": "pholidota",
+          "label": "Pholidota"
+        },
+        {
+          "id": "lagomorpha",
+          "label": "Lagomorpha"
+        },
+        {
+          "id": "rodentia",
+          "label": "Rodentia"
+        },
+        {
+          "id": "cetacea",
+          "label": "Cetacea"
+        },
+        {
+          "id": "pinnipedia",
+          "label": "Pinnipedia"
+        },
+        {
+          "id": "sirenia",
+          "label": "Sirenia"
+        },
+        {
+          "id": "canidae",
+          "label": "Canidae"
+        },
+        {
+          "id": "felidae",
+          "label": "Felidae"
+        },
+        {
+          "id": "mustelidae",
+          "label": "Mustelidae"
+        },
+        {
+          "id": "procyonids_viverrids",
+          "label": "Procyonids and Viverrids"
+        },
+        {
+          "id": "ursidae",
+          "label": "Ursidae"
+        },
+        {
+          "id": "hyaenidae",
+          "label": "Hyaenidae"
+        },
+        {
+          "id": "tubulidentata",
+          "label": "Tubulidentata"
+        },
+        {
+          "id": "proboscidea",
+          "label": "Proboscidea"
+        },
+        {
+          "id": "hyracoidea",
+          "label": "Hyracoidea"
+        },
+        {
+          "id": "rhinoceridae",
+          "label": "Rhinoceridae"
+        },
+        {
+          "id": "tapiridae",
+          "label": "Tapiridae"
+        },
+        {
+          "id": "equidae",
+          "label": "Equidae"
+        },
+        {
+          "id": "suidae_tayassuidae",
+          "label": "Suidae and Tayassuidae"
+        },
+        {
+          "id": "hippopotamidae",
+          "label": "Hippopotamidae"
+        },
+        {
+          "id": "camelidae",
+          "label": "Camelidae"
+        },
+        {
+          "id": "giraffidae",
+          "label": "Giraffidae"
+        },
+        {
+          "id": "tragulidae_moschidae_cervidae",
+          "label": "Tragulidae, Moschidae and Cervidae"
+        },
+        {
+          "id": "bovidae",
+          "label": "Bovidae"
+        },
+        {
+          "id": "caprinae",
+          "label": "Caprinae"
+        }
+      ]
+    },
+    {
+      "id": "invertebres",
+      "label": "Invertébrés",
+      "orders": []
+    },
+    {
+      "id": "poissons",
+      "label": "Poissons",
+      "orders": []
+    }
+  ],
+  "fallback": {
+    "group": "others",
+    "order": "others"
+  }
+}

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react'
 import { catIcons, catColors, catNames, getCatNum, getCatIcon, getCatColor } from './categories'
 import { parseCSV } from './csvParser'
+import { filterTaxonomyGroups } from './taxonomy.js'
 
 /* ── Google SVG icon ── */
 export function GoogleIcon() {
@@ -36,8 +37,14 @@ export function ConfirmModal({ message, onConfirm, onCancel }) {
   )
 }
 
-/* ── Filtres par catégorie ── */
-export function CategoryFilters({ allCards, activeFilters, onToggle }) {
+/* ── Sélection par catégorie ── */
+export function CategorySelectionControls({
+  allCards,
+  selectedCategories,
+  onToggleCategory,
+  selectionMode,
+  onSelectionModeChange,
+}) {
   const cats = useMemo(() => {
     const m = {}
     allCards.forEach(c => {
@@ -49,19 +56,139 @@ export function CategoryFilters({ allCards, activeFilters, onToggle }) {
   }, [allCards])
 
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-      {cats.map(([num, { count }]) => {
-        const col = catColors[num] || { bg: '#f3f4f6', border: '#9ca3af', text: '#374151' }
-        const active = activeFilters.includes(num)
-        return (
-          <button key={num} className={`filter-chip ${active ? '' : 'inactive'}`}
-            onClick={() => onToggle(num)}
-            style={{ borderColor: col.border, background: active ? col.bg : 'transparent', color: col.text }}>
-            {catIcons[num] || '📋'} {catNames[num] || `Cat ${num}`} ({count})
+    <div className="selection-panel">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#78716c', marginBottom: 4, letterSpacing: 0.5 }}>
+            Category selection
+          </div>
+          <div style={{ fontFamily: "'EB Garamond', serif", fontSize: 15, color: '#44403c' }}>
+            Leave empty to study all categories.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className={`selection-mode-btn ${selectionMode === 'AND' ? 'active' : ''}`}
+            onClick={() => onSelectionModeChange('AND')}
+            type="button"
+          >
+            AND
           </button>
-        )
-      })}
+          <button
+            className={`selection-mode-btn ${selectionMode === 'OR' ? 'active' : ''}`}
+            onClick={() => onSelectionModeChange('OR')}
+            type="button"
+          >
+            OR
+          </button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {cats.map(([num, { count }]) => {
+          const col = catColors[num] || { bg: '#f3f4f6', border: '#9ca3af', text: '#374151' }
+          const active = selectedCategories.includes(num)
+          return (
+            <button key={num} className={`filter-chip ${active ? '' : 'inactive'}`}
+              onClick={() => onToggleCategory(num)}
+              style={{ borderColor: col.border, background: active ? col.bg : 'transparent', color: col.text }}>
+              {catIcons[num] || '📋'} {catNames[num] || `Cat ${num}`} ({count})
+            </button>
+          )
+        })}
+      </div>
     </div>
+  )
+}
+
+export function TaxonomySelection({
+  taxonomyGroups,
+  selectedGroupId,
+  selectedOrderId,
+  searchQuery,
+  onSearchChange,
+  onSelectGroup,
+  onSelectOrder,
+  onResetSelection,
+}) {
+  const visibleGroups = useMemo(
+    () => filterTaxonomyGroups(taxonomyGroups, searchQuery),
+    [taxonomyGroups, searchQuery]
+  )
+
+  const currentSelectionLabel = selectedOrderId || selectedGroupId || 'Tous'
+
+  return (
+    <details className="selection-panel" open>
+      <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#78716c', marginBottom: 4, letterSpacing: 0.5 }}>
+            Taxonomy selection
+          </div>
+          <div style={{ fontFamily: "'EB Garamond', serif", fontSize: 15, color: '#44403c' }}>
+            Current selection: {currentSelectionLabel}
+          </div>
+        </div>
+        <button className="btn" type="button" onClick={e => { e.preventDefault(); onResetSelection() }}>
+          Tous
+        </button>
+      </summary>
+      <div style={{ marginTop: 14 }}>
+        <input
+          className="taxonomy-search-input"
+          type="text"
+          value={searchQuery}
+          onChange={e => onSearchChange(e.target.value)}
+          placeholder="Search groups or orders"
+        />
+        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+          {visibleGroups.map(group => {
+            const groupActive = selectedGroupId === group.id && !selectedOrderId
+            return (
+              <section key={group.id} className="taxonomy-group-block">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, color: '#292524', fontWeight: 600 }}>
+                    {group.label}
+                  </h3>
+                  <button
+                    className={`group-selection-btn ${groupActive ? 'active' : ''}`}
+                    type="button"
+                    onClick={() => onSelectGroup(group.id)}
+                  >
+                    Select group
+                  </button>
+                </div>
+                {group.orders.length === 0 ? (
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#a8a29e', marginTop: 8 }}>
+                    No orders configured yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                    {group.orders.map(order => {
+                      const orderActive = selectedOrderId === order.id
+                      return (
+                        <button
+                          key={order.id}
+                          className={`taxonomy-order-chip ${orderActive ? 'active' : ''}`}
+                          type="button"
+                          onClick={() => onSelectOrder(group.id, order.id)}
+                        >
+                          {order.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+            )
+          })}
+          {visibleGroups.length === 0 && (
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: '#78716c' }}>
+              No taxonomy options match this search.
+            </div>
+          )}
+        </div>
+      </div>
+    </details>
   )
 }
 
@@ -69,6 +196,7 @@ export function CategoryFilters({ allCards, activeFilters, onToggle }) {
 export function FlashCard({ card, index, total, onNext, onPrev, onFlip, flipped, onDelete }) {
   const c = getCatColor(card.category)
   const icon = getCatIcon(card.category)
+  const speciesLabel = card.speciesLabel || card.species
 
   return (
     <div className="flip-container card-in" key={card.id}>
@@ -87,9 +215,9 @@ export function FlashCard({ card, index, total, onNext, onPrev, onFlip, flipped,
               {index + 1} / {total}
             </span>
           </div>
-          {card.species && (
+          {speciesLabel && (
             <div style={{ fontFamily: "'EB Garamond', serif", fontSize: 13, fontStyle: 'italic', color: c.text, opacity: 0.6, marginBottom: 16 }}>
-              {card.species}
+              {speciesLabel}
             </div>
           )}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

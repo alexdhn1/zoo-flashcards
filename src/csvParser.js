@@ -6,6 +6,12 @@
  * @param {string} text  Raw UTF-8 text of the dropped .csv file
  * @returns {{ cards: object[], skipped: number, error: string|null }}
  */
+import {
+  normalizeTaxonomyOrder,
+  TAXONOMY_FALLBACK_GROUP,
+  TAXONOMY_FALLBACK_ORDER,
+} from './taxonomy.js'
+
 export function parseCSV(text) {
   if (!text || !text.trim()) {
     return { cards: [], skipped: 0, error: 'EMPTY_FILE' }
@@ -29,16 +35,22 @@ export function parseCSV(text) {
     }
     const question = cols[0].trim()
     const answer = cols[1].trim()
+    const rawTaxonomyOrder = cols[2]?.trim() || ''
+    const speciesLabel = cols[3]?.trim() || ''
     if (!question || !answer) {
       skipped++
       continue
     }
+    const normalizedTaxonomy = normalizeTaxonomyOrder(rawTaxonomyOrder)
     cards.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       question,
       answer,
       category: '',
-      species: '',
+      species: speciesLabel,
+      speciesLabel,
+      taxonomyGroup: rawTaxonomyOrder ? normalizedTaxonomy.taxonomyGroup : TAXONOMY_FALLBACK_GROUP,
+      taxonomyOrder: rawTaxonomyOrder ? normalizedTaxonomy.taxonomyOrder : TAXONOMY_FALLBACK_ORDER,
       addedAt: new Date().toISOString(),
     })
   }

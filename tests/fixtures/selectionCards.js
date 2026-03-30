@@ -1,0 +1,32 @@
+export const selectionCards = [
+  {
+    id: 'legacy-1',
+    question: 'Legacy question',
+    answer: 'Legacy answer',
+    category: '1 — Diagnosis',
+    species: 'Panthera leo',
+    addedAt: '2026-03-30T00:00:00.000Z',
+  },
+  {
+    id: 'bird-1',
+    question: 'Bird question',
+    answer: 'Bird answer',
+    category: '2 — Therapeutics',
+    species: 'Ara macao',
+    taxonomyGroup: 'oiseaux',
+    taxonomyOrder: 'psittaciformes',
+    speciesLabel: 'Ara macao',
+    addedAt: '2026-03-30T00:01:00.000Z',
+  },
+  {
+    id: 'mammal-1',
+    question: 'Mammal question',
+    answer: 'Mammal answer',
+    category: '6 — Species specifics',
+    species: 'Canis lupus familiaris',
+    taxonomyGroup: 'mammiferes',
+    taxonomyOrder: 'canidae',
+    speciesLabel: 'Dog',
+    addedAt: '2026-03-30T00:02:00.000Z',
+  },
+]

@@ -3,8 +3,22 @@ import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider, ALLOWED_EMAILS } from './firebase-config'
 import { loadCardsFromFirestore, addCardsToFirestore, deleteCardFromFirestore, clearAllCardsFirestore } from './firestore'
 import { parseFlashcards } from './parser'
-import { getCatNum } from './categories'
-import { Toast, ConfirmModal, CategoryFilters, FlashCard, ProgressDots, LoginScreen, CsvImportZone } from './components'
+import {
+  applyCombinedSelection,
+  getSafeSelectedIndex,
+  getTaxonomyGroups,
+  normalizeCardTaxonomy,
+} from './taxonomy.js'
+import {
+  Toast,
+  ConfirmModal,
+  CategorySelectionControls,
+  FlashCard,
+  ProgressDots,
+  LoginScreen,
+  CsvImportZone,
+  TaxonomySelection,
+} from './components'
 
 /* ── Export JSON (téléchargement fichier) ── */
 function exportJSON(cards) {
@@ -34,10 +48,15 @@ export default function App() {
   const [parseError, setParseError] = useState('')
   const [toast, setToast] = useState({ message: '', visible: false })
   const [confirmDel, setConfirmDel] = useState(null)
-  const [activeFilters, setActiveFilters] = useState([])
+  const [selectedCategories, setSelectedCategories] = useState([])
+  const [selectionMode, setSelectionMode] = useState('AND')
+  const [selectedTaxonomyGroupId, setSelectedTaxonomyGroupId] = useState(null)
+  const [selectedTaxonomyOrderId, setSelectedTaxonomyOrderId] = useState(null)
+  const [taxonomySearchQuery, setTaxonomySearchQuery] = useState('')
   const [syncStatus, setSyncStatus] = useState('ok')
   const [dataLoaded, setDataLoaded] = useState(false)
   const fileRef = useRef(null)
+  const taxonomyGroups = useMemo(() => getTaxonomyGroups(), [])
 
   const showToast = msg => {
     setToast({ message: msg, visible: true })
@@ -73,7 +92,12 @@ export default function App() {
 
   const handleLogout = useCallback(async () => {
     await signOut(auth)
-    setAllCards([]); setView('input'); setActiveFilters([])
+    setAllCards([])
+    setView('input')
+    setSelectedCategories([])
+    setSelectedTaxonomyGroupId(null)
+    setSelectedTaxonomyOrderId(null)
+    setTaxonomySearchQuery('')
   }, [])
 
   /* ══════════════════════════════════════
@@ -84,7 +108,7 @@ export default function App() {
     setDataLoaded(false)
     loadCardsFromFirestore(user.uid)
       .then(cards => {
-        setAllCards(cards)
+        setAllCards(cards.map(normalizeCardTaxonomy))
         setDataLoaded(true)
         if (cards.length > 0) setView('cards')
       })
@@ -96,31 +120,70 @@ export default function App() {
   }, [user])
 
   /* ══════════════════════════════════════
-     FILTRES
+     SÉLECTIONS
      ══════════════════════════════════════ */
-  useEffect(() => {
-    const cats = [...new Set(allCards.map(c => getCatNum(c.category)))]
-    setActiveFilters(prev => {
-      if (prev.length === 0) return cats
-      return [...new Set([...prev, ...cats])]
-    })
-  }, [allCards.length])
+  const selectedCards = useMemo(() => {
+    let nextCards = applyCombinedSelection(
+      allCards,
+      {
+        selectedGroupId: selectedTaxonomyGroupId,
+        selectedOrderId: selectedTaxonomyOrderId,
+      },
+      {
+        selectedCategoryIds: selectedCategories,
+        mode: selectionMode,
+      },
+      selectionMode
+    )
 
-  const filteredCards = useMemo(() => {
-    let fc = allCards.filter(c => activeFilters.includes(getCatNum(c.category)))
     if (shuffleOrder) {
       const order = new Map(shuffleOrder.map((id, i) => [id, i]))
-      fc = [...fc].sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999))
+      nextCards = [...nextCards].sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999))
     }
-    return fc
-  }, [allCards, activeFilters, shuffleOrder])
+    return nextCards
+  }, [allCards, selectedTaxonomyGroupId, selectedTaxonomyOrderId, selectedCategories, selectionMode, shuffleOrder])
 
-  const toggleFilter = useCallback(num => {
-    setActiveFilters(prev => {
-      const next = prev.includes(num) ? prev.filter(c => c !== num) : [...prev, num]
-      return next.length === 0 ? prev : next
-    })
-    setIdx(0); setFlipped(false)
+  useEffect(() => {
+    setIdx(currentIndex => getSafeSelectedIndex(currentIndex, selectedCards.length))
+    if (selectedCards.length === 0) {
+      setFlipped(false)
+    }
+  }, [selectedCards.length])
+
+  const toggleCategorySelection = useCallback(categoryId => {
+    setSelectedCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    )
+    setIdx(0)
+    setFlipped(false)
+    setShuffleOrder(null)
+  }, [])
+
+  const handleSelectTaxonomyGroup = useCallback(groupId => {
+    setSelectedTaxonomyGroupId(groupId)
+    setSelectedTaxonomyOrderId(null)
+    setIdx(0)
+    setFlipped(false)
+    setShuffleOrder(null)
+  }, [])
+
+  const handleSelectTaxonomyOrder = useCallback((groupId, orderId) => {
+    setSelectedTaxonomyGroupId(groupId)
+    setSelectedTaxonomyOrderId(orderId)
+    setIdx(0)
+    setFlipped(false)
+    setShuffleOrder(null)
+  }, [])
+
+  const handleResetTaxonomySelection = useCallback(() => {
+    setSelectedTaxonomyGroupId(null)
+    setSelectedTaxonomyOrderId(null)
+    setTaxonomySearchQuery('')
+    setIdx(0)
+    setFlipped(false)
+    setShuffleOrder(null)
   }, [])
 
   /* ══════════════════════════════════════
@@ -128,7 +191,7 @@ export default function App() {
      ══════════════════════════════════════ */
   const handleParse = useCallback(async () => {
     setParseError('')
-    const parsed = parseFlashcards(rawText)
+    const parsed = parseFlashcards(rawText).map(normalizeCardTaxonomy)
     if (parsed.length > 0) {
       setSyncStatus('saving')
       try {
@@ -154,27 +217,34 @@ export default function App() {
       await deleteCardFromFirestore(user.uid, confirmDel)
       setAllCards(prev => prev.filter(c => c.id !== confirmDel))
       setConfirmDel(null); setFlipped(false)
-      setIdx(i => { const n = filteredCards.filter(c => c.id !== confirmDel).length; return i >= n ? Math.max(0, n - 1) : i })
+      setIdx(i => getSafeSelectedIndex(i, selectedCards.filter(c => c.id !== confirmDel).length))
       setSyncStatus('ok')
       showToast('🗑 Card deleted')
     } catch (err) {
       setSyncStatus('error'); showToast('❌ Failed to delete'); setConfirmDel(null)
     }
-  }, [confirmDel, user, filteredCards])
+  }, [confirmDel, user, selectedCards])
 
   const handleClearAll = useCallback(async () => {
     setSyncStatus('saving')
     try {
       await clearAllCardsFirestore(user.uid)
-      setAllCards([]); setActiveFilters([]); setIdx(0); setView('input'); setShuffleOrder(null)
+      setAllCards([])
+      setSelectedCategories([])
+      setSelectedTaxonomyGroupId(null)
+      setSelectedTaxonomyOrderId(null)
+      setTaxonomySearchQuery('')
+      setIdx(0)
+      setView('input')
+      setShuffleOrder(null)
       setSyncStatus('ok'); showToast('🗑 All cards cleared')
     } catch (err) { setSyncStatus('error'); showToast('❌ Failed to clear') }
   }, [user])
 
   const handleShuffle = useCallback(() => {
-    const ids = filteredCards.map(c => c.id).sort(() => Math.random() - 0.5)
+    const ids = selectedCards.map(c => c.id).sort(() => Math.random() - 0.5)
     setShuffleOrder(ids); setIdx(0); setFlipped(false)
-  }, [filteredCards])
+  }, [selectedCards])
 
   const handleImport = useCallback(async (e) => {
     const file = e.target.files[0]; if (!file) return
@@ -184,7 +254,7 @@ export default function App() {
         const imp = JSON.parse(ev.target.result)
         if (Array.isArray(imp) && imp.length > 0) {
           const wi = imp.map(c => ({
-            ...c,
+            ...normalizeCardTaxonomy(c),
             id: c.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
             addedAt: c.addedAt || new Date().toISOString(),
           }))
@@ -200,12 +270,13 @@ export default function App() {
   }, [user])
 
   const handleCsvImport = useCallback(async (cards) => {
+    const normalizedCards = cards.map(normalizeCardTaxonomy)
     setSyncStatus('saving')
     try {
-      await addCardsToFirestore(user.uid, cards)
-      setAllCards(prev => [...prev, ...cards])
+      await addCardsToFirestore(user.uid, normalizedCards)
+      setAllCards(prev => [...prev, ...normalizedCards])
       setView('cards'); setSyncStatus('ok')
-      showToast(`📥 ${cards.length} cards imported & synced`)
+      showToast(`📥 ${normalizedCards.length} cards imported & synced`)
     } catch (err) {
       console.error('CSV import error:', err)
       setSyncStatus('error')
@@ -219,13 +290,13 @@ export default function App() {
   useEffect(() => {
     if (view !== 'cards') return
     const h = e => {
-      if (e.key === 'ArrowRight' || e.key === 'd') { setIdx(i => Math.min(i + 1, filteredCards.length - 1)); setFlipped(false) }
+      if (e.key === 'ArrowRight' || e.key === 'd') { setIdx(i => Math.min(i + 1, selectedCards.length - 1)); setFlipped(false) }
       else if (e.key === 'ArrowLeft' || e.key === 'a') { setIdx(i => Math.max(i - 1, 0)); setFlipped(false) }
       else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setFlipped(f => !f) }
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [view, filteredCards.length])
+  }, [view, selectedCards.length])
 
   /* ══════════════════════════════════════
      RENDER
@@ -309,7 +380,7 @@ export default function App() {
   }
 
   /* ── VUE CARDS ── */
-  const card = filteredCards[idx]
+  const card = selectedCards[idx]
   return (
     <div style={{ padding: '24px 20px', maxWidth: 680, margin: '0 auto' }}>
       {headerBar}
@@ -317,24 +388,21 @@ export default function App() {
         <button className="btn" onClick={() => setView('input')}>+ add cards</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 18 }}>🦎</span>
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#78716c' }}>{filteredCards.length} / {allCards.length} cards</span>
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#78716c' }}>{selectedCards.length} / {allCards.length} cards</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn" onClick={() => exportJSON(allCards)} title="Export JSON">📤</button>
           <button className="btn" onClick={handleShuffle} title="Shuffle">🔀</button>
         </div>
       </div>
-      <div style={{ marginBottom: 20 }}>
-        <CategoryFilters allCards={allCards} activeFilters={activeFilters} onToggle={toggleFilter} />
-      </div>
-      {filteredCards.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#78716c', fontFamily: "'DM Mono', monospace", fontSize: 13 }}>No cards match the selected filters</div>
+      {selectedCards.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#78716c', fontFamily: "'DM Mono', monospace", fontSize: 13 }}>No cards match the current selection</div>
       ) : (
         <>
-          <div style={{ marginBottom: 24 }}><ProgressDots cards={filteredCards} currentIndex={idx} onJump={i => { setIdx(i); setFlipped(false) }} /></div>
-          {card && <FlashCard card={card} index={idx} total={filteredCards.length} flipped={flipped}
+          <div style={{ marginBottom: 24 }}><ProgressDots cards={selectedCards} currentIndex={idx} onJump={i => { setIdx(i); setFlipped(false) }} /></div>
+          {card && <FlashCard card={card} index={idx} total={selectedCards.length} flipped={flipped}
             onFlip={() => setFlipped(f => !f)}
-            onNext={() => { setIdx(i => Math.min(i + 1, filteredCards.length - 1)); setFlipped(false) }}
+            onNext={() => { setIdx(i => Math.min(i + 1, selectedCards.length - 1)); setFlipped(false) }}
             onPrev={() => { setIdx(i => Math.max(i - 1, 0)); setFlipped(false) }}
             onDelete={handleDelete} />}
           <div style={{ textAlign: 'center', marginTop: 32, fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#a8a29e' }}>
@@ -342,6 +410,25 @@ export default function App() {
           </div>
         </>
       )}
+      <div style={{ display: 'grid', gap: 16, marginTop: 24 }}>
+        <TaxonomySelection
+          taxonomyGroups={taxonomyGroups}
+          selectedGroupId={selectedTaxonomyGroupId}
+          selectedOrderId={selectedTaxonomyOrderId}
+          searchQuery={taxonomySearchQuery}
+          onSearchChange={setTaxonomySearchQuery}
+          onSelectGroup={handleSelectTaxonomyGroup}
+          onSelectOrder={handleSelectTaxonomyOrder}
+          onResetSelection={handleResetTaxonomySelection}
+        />
+        <CategorySelectionControls
+          allCards={allCards}
+          selectedCategories={selectedCategories}
+          onToggleCategory={toggleCategorySelection}
+          selectionMode={selectionMode}
+          onSelectionModeChange={setSelectionMode}
+        />
+      </div>
       {confirmDel && <ConfirmModal message="Delete this flashcard? This cannot be undone." onConfirm={doDelete} onCancel={() => setConfirmDel(null)} />}
       <Toast message={toast.message} visible={toast.visible} />
     </div>

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, test, expect } from 'vitest'
 import { parseCSV } from '../src/csvParser.js'
+import { TAXONOMY_FALLBACK_GROUP, TAXONOMY_FALLBACK_ORDER } from '../src/taxonomy.js'
 
 // ─────────────────────────────────────────────
 //  US1 — Happy path tests (TC-01, TC-05, TC-06, TC-08)
@@ -53,6 +54,24 @@ describe('US1 — Happy path parsing', () => {
     expect(result.error).toBeNull()
     expect(result.skipped).toBe(0)
     expect(result.cards).toHaveLength(200)
+  })
+
+  test('adds taxonomy fallback fields to each parsed card', () => {
+    const result = parseCSV('Question,A simple answer')
+    expect(result.error).toBeNull()
+    expect(result.cards).toHaveLength(1)
+    expect(result.cards[0].taxonomyGroup).toBe(TAXONOMY_FALLBACK_GROUP)
+    expect(result.cards[0].taxonomyOrder).toBe(TAXONOMY_FALLBACK_ORDER)
+    expect(result.cards[0].speciesLabel).toBe('')
+  })
+
+  test('applies normalized taxonomy fields when a raw taxonomy order is present', () => {
+    const result = parseCSV('Question,Answer,Great Apes,Gorilla gorilla')
+    expect(result.error).toBeNull()
+    expect(result.cards).toHaveLength(1)
+    expect(result.cards[0].taxonomyGroup).toBe('mammiferes')
+    expect(result.cards[0].taxonomyOrder).toBe('great_apes')
+    expect(result.cards[0].speciesLabel).toBe('Gorilla gorilla')
   })
 })
 

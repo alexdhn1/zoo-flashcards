@@ -95,6 +95,74 @@ body {
 .filter-chip:hover { transform: translateY(-1px); }
 .filter-chip.inactive { opacity: 0.35; }
 
+.selection-panel {
+  border: 1px solid #e7e0d5;
+  border-radius: 16px;
+  background: rgba(255, 255, 254, 0.82);
+  padding: 16px;
+}
+
+.selection-mode-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid #d6cfc7;
+  background: transparent;
+  color: #78716c;
+  cursor: pointer;
+}
+
+.selection-mode-btn.active {
+  background: #292524;
+  border-color: #292524;
+  color: #fafaf9;
+}
+
+.taxonomy-search-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d6cfc7;
+  background: #fffffe;
+  padding: 10px 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: #44403c;
+}
+
+.taxonomy-group-block {
+  border: 1px solid #efe7db;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fffdfa;
+}
+
+.group-selection-btn,
+.taxonomy-order-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid #d6cfc7;
+  background: transparent;
+  color: #57534e;
+  cursor: pointer;
+}
+
+.group-selection-btn {
+  padding: 7px 12px;
+}
+
+.taxonomy-order-chip {
+  padding: 6px 10px;
+}
+
+.group-selection-btn.active,
+.taxonomy-order-chip.active {
+  background: #f0ebe3;
+  border-color: #a8a29e;
+  color: #292524;
+}
+
 .spinner {
   width: 24px; height: 24px;
   border: 3px solid #e2e0db; border-top-color: #292524;
