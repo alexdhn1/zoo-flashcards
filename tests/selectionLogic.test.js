@@ -52,6 +52,33 @@ describe('US4 — taxonomy selection behavior', () => {
     expect(result.map(card => card.id)).toEqual(['bird-1'])
   })
 
+  test('returns cards from selected group even when card taxonomyGroup is non-canonical', () => {
+    const cardsWithLegacyGroup = [
+      ...selectionCards,
+      {
+        id: 'bird-legacy-group',
+        question: 'Legacy bird group id',
+        answer: 'Uses order as source of truth for group selection',
+        category: '2 — Therapeutics',
+        species: 'Ara ararauna',
+        taxonomyGroup: 'birds',
+        taxonomyOrder: 'psittaciformes',
+        speciesLabel: 'Blue and Gold Macaw',
+        addedAt: '2026-03-30T00:03:00.000Z',
+      },
+    ]
+
+    const result = applyCombinedSelection(cardsWithLegacyGroup, {
+      selectedGroupId: 'oiseaux',
+      selectedOrderId: null,
+    }, {
+      selectedCategoryIds: [],
+      mode: 'AND',
+    }, 'AND')
+
+    expect(result.map(card => card.id)).toEqual(['bird-1', 'bird-legacy-group'])
+  })
+
   test('returns only cards from the selected taxonomy order', () => {
     const result = applyCombinedSelection(selectionCards, {
       selectedGroupId: null,

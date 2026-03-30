@@ -171,7 +171,14 @@ export function applyTaxonomySelection(cards, taxonomySelection = {}) {
     if (selectedOrderId) {
       return card.taxonomyOrder === selectedOrderId
     }
-    return card.taxonomyGroup === selectedGroupId
+
+    if (card.taxonomyGroup === selectedGroupId) {
+      return true
+    }
+
+    const selectedGroup = getTaxonomyGroups().find(group => group.id === selectedGroupId)
+    const selectedGroupOrderIds = new Set((selectedGroup?.orders || []).map(order => order.id))
+    return selectedGroupOrderIds.has(card.taxonomyOrder)
   })
 }
 
