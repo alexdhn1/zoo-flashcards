@@ -15,46 +15,91 @@ import { TAXONOMY_FALLBACK_GROUP, TAXONOMY_FALLBACK_ORDER } from './taxonomy'
 export function parseFlashcards(text) {
   const cards = []
 
-  // Pré-traitement : injecter un saut de ligne entre "FLASHCARD N" et "Q :"
-  // quand ils sont collés (ex: "FLASHCARD 1Q :")
-  const normalized = text.replace(
-    /FLASHCARD\s*(\d+)\s*(?=Q\s*[:：])/gi,
-    'FLASHCARD $1\n'
-  )
+  // Pré-traitement : ajouter des sauts de ligne stratégiques
+  // Séparer FLASHCARD# des éléments qui suivent immédiatement sans espace
+  let normalized = text
+    .replace(/FLASHCARD\s*(\d+)\s*(?=Q\s*[:：])/gi, 'FLASHCARD $1\n')  // FLASHCARD#Q: -> FLASHCARD#\nQ:
+    .replace(/(?<=:)\s*FLASHCARD\s*(\d+)/gi, '\n\nFLASHCARD $1') // Ajouter saut avant FLASHCARD quand collé à fin de champ
 
   // Découper par "FLASHCARD N"
-  const blocks = normalized.split(/(?=FLASHCARD\s*\d+)/i).filter(b => b.trim())
+  const flashcardPattern = /FLASHCARD\s*(\d+)/gi
+  let match
+  const positions = []
+  
+  while ((match = flashcardPattern.exec(normalized)) !== null) {
+    positions.push({
+      index: match.index,
+      number: parseInt(match[1]),
+    })
+  }
 
-  for (const block of blocks) {
-    const cleaned = block
+  for (let i = 0; i < positions.length; i++) {
+    const startIdx = positions[i].index
+    const endIdx = i + 1 < positions.length ? positions[i + 1].index : normalized.length
+    const blockText = normalized.substring(startIdx, endIdx)
+    
+    // Nettoyer et extraire les champs
+    const cleaned = blockText
       .replace(/^---+\s*/gm, '')
       .replace(/^FLASHCARD\s*\d+\s*/i, '')
       .trim()
+
     if (!cleaned) continue
 
-    let question = '', answer = '', category = '', species = ''
+    let question = '', answer = '', category = '', species = '', taxonomyOrder = '', taxonomyGroup = ''
 
-    // Extraire Q :
-    const qMatch = cleaned.match(/^Q\s*[:：]\s*([\s\S]*?)(?=\n?\s*[RA]\s*[:：])/im)
-    if (qMatch) question = qMatch[1].replace(/\s+/g, ' ').trim()
+    // Extraire Q : - chercher jusqu'au prochain marqueur de champ
+    const qMatch = cleaned.match(/Q\s*[:：]\s*([\s\S]*?)(?=(?:[RA]|Cat|Species|TaxonomyOrder|TaxonomyGroup)\s*[:：]|$)/im)
+    if (qMatch) {
+      question = qMatch[1]
+        .replace(/[\n\r]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
 
-    // Extraire R/A :
-    const aMatch = cleaned.match(/^[RA]\s*[:：]\s*([\s\S]*?)(?=\n?\s*Cat[ée]gor|$)/im)
-    if (aMatch) answer = aMatch[1].replace(/\s+/g, ' ').trim()
+    // Extraire R/A : - chercher jusqu'au prochain marqueur de champ
+    const aMatch = cleaned.match(/[RA]\s*[:：]\s*([\s\S]*?)(?=(?:[QRA]|Cat|Species|TaxonomyOrder|TaxonomyGroup)\s*[:：]|$)/im)
+    if (aMatch) {
+      answer = aMatch[1]
+        .replace(/[\n\r]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
 
-    // Extraire Catégorie/Category
-    const catMatch = cleaned.match(/Cat[ée]gor[yi]e?\s*[:：]\s*(.+)/i)
-    if (catMatch) category = catMatch[1].trim()
+    // Extraire Catégorie/Category - jusqu'au prochain marqueur
+    const catMatch = cleaned.match(/Cat[ée]gor[yi]e?\s*[:：]\s*([\s\S]*?)(?=(?:Species|TaxonomyOrder|TaxonomyGroup)\s*[:：]|$)/i)
+    if (catMatch) {
+      category = catMatch[1]
+        .replace(/[\n\r]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
 
-    // Extraire Espèce/Species
-    const spMatch = cleaned.match(/(Species|Esp[èe]ce)\s*[:：]\s*(.+)/i)
-    if (spMatch) species = spMatch[2].trim()
+    // Extraire Espèce/Species - jusqu'au prochain marqueur
+    const spMatch = cleaned.match(/(Species|Esp[èe]ce)\s*[:：]\s*([\s\S]*?)(?=(?:TaxonomyOrder|TaxonomyGroup)\s*[:：]|$)/i)
+    if (spMatch) {
+      species = spMatch[2]
+        .replace(/[\n\r]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
 
-    // Nettoyage croisé
-    if (category) category = category.replace(/(Species|Esp[èe]ce)\s*[:：].*/i, '').trim()
-    if (answer) {
-      answer = answer.replace(/Cat[ée]gor[yi]e?\s*[:：].*/i, '').trim()
-      answer = answer.replace(/(Species|Esp[èe]ce)\s*[:：].*/i, '').trim()
+    // Extraire TaxonomyOrder - jusqu'au prochain marqueur
+    const toMatch = cleaned.match(/TaxonomyOrder\s*[:：]\s*([\s\S]*?)(?=TaxonomyGroup\s*[:：]|$)/i)
+    if (toMatch) {
+      taxonomyOrder = toMatch[1]
+        .replace(/[\n\r]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
+
+    // Extraire TaxonomyGroup - jusqu'à la fin ou prochain FLASHCARD
+    const tgMatch = cleaned.match(/TaxonomyGroup\s*[:：]\s*([\s\S]*?)$/i)
+    if (tgMatch) {
+      taxonomyGroup = tgMatch[1]
+        .replace(/[\n\r]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
     }
 
     if (question && answer) {
@@ -62,14 +107,15 @@ export function parseFlashcards(text) {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
         question: question.trim(),
         answer: answer.trim(),
-        category,
-        species,
-        speciesLabel: species,
-        taxonomyGroup: TAXONOMY_FALLBACK_GROUP,
-        taxonomyOrder: TAXONOMY_FALLBACK_ORDER,
+        category: category.trim(),
+        species: species.trim(),
+        speciesLabel: species.trim(),
+        taxonomyGroup: taxonomyGroup.trim() || TAXONOMY_FALLBACK_GROUP,
+        taxonomyOrder: taxonomyOrder.trim() || TAXONOMY_FALLBACK_ORDER,
         addedAt: new Date().toISOString(),
       })
     }
   }
+
   return cards
 }

@@ -352,7 +352,7 @@ export default function App() {
         </div>
         <div className="fade-up" style={{ animationDelay: '0.1s' }}>
           <textarea className="paste-area" value={rawText} onChange={e => setRawText(e.target.value)}
-            placeholder={`Paste flashcards output from Claude here...\n\nFLASHCARD 1\nQ: Your question...\nR: Your answer...\nCategory: 1 — Diagnosis\nSpecies: ...`} />
+            placeholder={`Paste flashcards output from Claude here...\n\nFLASHCARD 1\nQ: Your question...\nR: Your answer...\nCategory: 1 — Diagnosis\nSpecies: Blue and Gold Macaw (Ara ararauna)\nTaxonomyOrder: psittaciformes\nTaxonomyGroup: oiseaux`} />
         </div>
         <div className="fade-up" style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'center', flexWrap: 'wrap', animationDelay: '0.2s' }}>
           <button className="btn-primary" onClick={handleParse} disabled={!rawText.trim() || syncStatus === 'saving'}>
